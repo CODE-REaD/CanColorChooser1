@@ -1,0 +1,16 @@
+.base-colors li { float: left; padding: 5px; margin: 0px; border: solid 2px white;}
+.base-colors {list-style: none;}
+.clear {clear: both;}
+
+.final-colors li { float: left; padding: 5px; margin: 0px; width: 40px;border: solid 2px white;}
+.final-colors {list-style: none; width: 320px;}
+
+.final {
+    width: 100px;
+    height: 100px;
+    margin: 40px;
+}
+
+li.selected  {
+    border: solid 2px black;
+}
