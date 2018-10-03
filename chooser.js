@@ -78,11 +78,11 @@ Component.extend({
             return this.finalColor || this.suggestedFinalColor || this.baseOrSuggestedColor;
         },
         get finalColors() {
-            var baseOrSuggestedColor = this.baseOrSuggestedColor;
-            var cols = 6;
-            var finalColors = [];
-            for(var c = 0; c < cols; c++) {
-                for(var r = 0 ; r < cols; r++) {
+            let baseOrSuggestedColor = this.baseOrSuggestedColor;
+            const cols = 7;
+            let finalColors = [];
+            for(let c = 0; c < cols; c++) {
+                for(let r = 0 ; r < cols; r++) {
                     let xOffset = 3 - c;    // How far am I from grid center?
                     let yOffset = 3 - r;
                     // Purely empirical way of getting a useful range:
