@@ -1,5 +1,6 @@
-import {Component} from "//unpkg.com/can@5/core.mjs";
-Component.extend({
+// import {Component} from "//unpkg.com/can@5/core.mjs";
+
+can.Component.extend({
     tag: "color-chooser",
     view: `
 		<div>Click to lock base color 
@@ -13,9 +14,9 @@ Component.extend({
 					on:click="selectBaseColor(color)"
 					on:mouseenter="suggestBaseColor(color)"
 					{{#eq(color, baseColor)}}class='selected'{{/eq}}>
-					R{{color.red}}<br/>
-					G{{color.green}}<br/>
-					B{{color.blue}}
+					R:{{color.red}}<br/>
+					G:{{color.green}}<br/>
+					B:{{color.blue}}
 				</li>
 			{{/for}}
 		</ul>
@@ -31,15 +32,15 @@ Component.extend({
 					on:click="selectFinalColor(color)"
 					on:mouseenter="suggestFinalColor(color)"
 					{{#eq(color,this.finalColor)}}class='selected'{{/eq}}>
-					R{{color.red}}<br/>
-					G{{color.green}}<br/>
-					B{{color.blue}}
+					R:{{color.red}}<br/>
+					G:{{color.green}}<br/>
+					B:{{color.blue}}
 				</li>
 			{{/for}}
 		</ul>
 		<div class='final clear' 
 			style="{{colorStyle(this.finalOrBaseOrSuggestedColor)}}">
-			FINAL COLOR
+			FINAL COLOR:
 			{{printShortColor(this.finalOrBaseOrSuggestedColor)}}
 		</div>
 	`,
@@ -78,24 +79,30 @@ Component.extend({
             return this.finalColor || this.suggestedFinalColor || this.baseOrSuggestedColor;
         },
         get finalColors() {
-            let baseOrSuggestedColor = this.baseOrSuggestedColor;
+            const baseOrSuggestedColor = this.baseOrSuggestedColor;
+            // console.log(`finalColors called with ${baseOrSuggestedColor.red}`);
             const cols = 7;
-            let finalColors = [];
+            let colorArray = [];
+            let red;
+            let green;
+            let blue;
+            let xOffset;
+            let yOffset;
             for(let c = 0; c < cols; c++) {
                 for(let r = 0 ; r < cols; r++) {
-                    let xOffset = 3 - c;    // How far am I from grid center?
-                    let yOffset = 3 - r;
+                    xOffset = 3 - c;    // How far am I from grid center?
+                    yOffset = 3 - r;
                     // Purely empirical way of getting a useful range:
-                    let red = baseOrSuggestedColor.red + xOffset * 19 + yOffset * 43;
-                    let green = baseOrSuggestedColor.green + xOffset * 19 + yOffset * 43;
-                    let blue = baseOrSuggestedColor.blue + xOffset * 19 + yOffset * 43;
+                    red = baseOrSuggestedColor.red + xOffset * 19 + yOffset * 43;
+                    green = baseOrSuggestedColor.green + xOffset * 19 + yOffset * 43;
+                    blue = baseOrSuggestedColor.blue + xOffset * 19 + yOffset * 43;
                     red = red > 255 ? 255 : red < 1 ? 0 : red;
                     green = green > 255 ? 255 : green < 1 ? 0 : green;
                     blue = blue > 255 ? 255 : blue < 1 ? 0 : blue;
-                    finalColors.push({red, green, blue})
+                    colorArray.push({red, green, blue})
                 }
             }
-            return finalColors;
+            return colorArray;
         },
         // HELPER METHODS
         colorStyle(color){
@@ -110,16 +117,16 @@ Component.extend({
         },
         selectBaseColor(color) {
             this.baseColor = color;
-            // There's less imperitive ways of doing this
+            // There are less imperative ways of doing this
             this.suggestedFinalColor = null;
             this.finalColor = null;
         },
         suggestFinalColor(color) {
             this.suggestedFinalColor = color;
         },
-        selectFinalColor(aColor) {
+        selectFinalColor(selectedFinalColor) {
             // debugger;
-            this.finalColor = aColor;
+            this.finalColor = selectedFinalColor;
         }
     }
 });
