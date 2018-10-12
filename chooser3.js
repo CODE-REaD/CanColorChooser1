@@ -1,8 +1,7 @@
 // import {Component} from "//unpkg.com/can@5/core.mjs";
 import {Component} from "//unpkg.com/can@5/core.min.mjs";
 
-const release = "1.0";          // "Semantic" program version for end users
-document.getElementById("cccVersion").innerHTML = release;
+const release = "2.0";          // "Semantic" program version for end users
 document.title = "CanJS Color Chooser " + release;
 
 const baseCols = 19;
@@ -131,11 +130,12 @@ button:focus {
     background: white;
 }
 `;
-document.body.appendChild(styleSheet);   // todo: flashes unstyled: prepend instead?
+document.head.appendChild(styleSheet);
 
 Component.extend({
     tag: "color-chooser",
     view: `
+        <h1>CanJS Color Chooser {{this.ccRelease}}</h1>
 		<div>Click to lock base color 
 			<span style="{{colorStyle(this.baseOrSuggestedColor)}}">
 				{{printShortColor(this.baseOrSuggestedColor)}}
@@ -175,11 +175,13 @@ Component.extend({
 			style="{{colorStyle(this.finalOrBaseOrSuggestedColor)}} padding: 12px; border: 3px solid gray;">
 			{{{printLongColor(this.finalOrBaseOrSuggestedColor)}}}
 		</span>
-		        <span style="padding: 12px" v-if="clipCopied"><b>{{clipCopied}}</b> copied to clipboard.</span>
-        <span style="padding: 12px" v-else></span>
-        <span></span>
-        <button on:click="copyToClip(this.finalOrBaseOrSuggestedColor)">
+		<span style="padding: 12px">{{#if(this.clipCopied)}}<b>{{this.clipCopied}}</b> copied to clipboard.{{/if}}</span>
+		<span></span>
+        <button on:click=copyToClip({{printShortColor(this.finalOrBaseOrSuggestedColor)}})>
             Copy <b>{{printShortColor(this.finalOrBaseOrSuggestedColor)}}</b> to clipboard</button>
+		<!-- Quotes coerce non-numeric to string for copyToClip(): -->
+        <button on:click=copyToClip(\"{{printHexColor(this.finalOrBaseOrSuggestedColor)}}\")>
+            Copy <b>{{printHexColor(this.finalOrBaseOrSuggestedColor)}}</b> to clipboard</button>
 		</span>
 	`,
     ViewModel: {
@@ -188,6 +190,8 @@ Component.extend({
         baseColor: "any",
         suggestedFinalColor: "any",
         finalColor: "any",
+        clipCopied: "any",
+        ccRelease: release,
 
         // DERIVED VALUES
         get baseColors() {
@@ -208,11 +212,7 @@ Component.extend({
             colors.push({red, green, blue});
             return colors;
         },
-        /*        get lastBaseColor(){
-                    return this.baseColors[this.baseColors.length-1];
-                },*/
         get baseOrSuggestedColor() {
-            // return this.baseColor || this.suggestedBaseColor || this.lastBaseColor;
             return this.baseColor || this.suggestedBaseColor || this.baseColors[baseCols - 1];
         },
         get finalOrBaseOrSuggestedColor() {
@@ -253,8 +253,14 @@ Component.extend({
         printShortColor(color) {
             return `${color.red},${color.green},${color.blue}`;
         },
+        printHexColor(color) {
+            let redHex = color.red.toString(16).padStart(2, "0");
+            let grnHex = color.green.toString(16).padStart(2, "0");
+            let bluHex = color.blue.toString(16).padStart(2, "0");
+            return `#${redHex}${grnHex}${bluHex}`;
+        },
         printLongColor(color) {
-            return `R:${color.red}<br>G:${color.green}<br>B:${color.blue}<br>`
+            return `R:${color.red}<br>G:${color.green}<br>B:${color.blue}`
         },
 
         // METHODS THAT CHANGE STATE
@@ -287,6 +293,16 @@ Component.extend({
                 this.finalColor = color;
                 this.suggestedFinalColor = color;
             }
-        }
+        },
+        // Copy argument(s) to end user system's clipboard:
+        copyToClip(...clipStrings) {
+            let textArea = document.createElement("textarea");
+            textArea.value = clipStrings;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("Copy");
+            textArea.remove();
+            this.clipCopied = `${clipStrings}`;
+        },
     }
 });
