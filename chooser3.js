@@ -1,26 +1,33 @@
 // import {Component} from "//unpkg.com/can@5/core.mjs";
 import {Component} from "//unpkg.com/can@5/core.min.mjs";
 
-const release = "2.2";          // "Semantic" program version for end users
+const release = "2.3";          // "Semantic" program version for end users
 document.title = "CanJS Color Chooser " + release;
 
+///// Set up responsive sizing of all elements by executing our CSS via JavaScript:
+
 const gridCellSize = 45;
-let baseCols;
+const outmostPct = 95;
+let baseColSpec;
 let finalColSpec;
 
-setWidth();
-window.addEventListener('resize', setWidth);
+setMySize();
+window.addEventListener('resize', setMySize);
 
-function setWidth() {
-    const winWidth = document.documentElement.clientWidth;
-    // const gridCellSize = Math.round(winWidth / 21);
-    baseCols = Math.round(winWidth / 50);
-    finalColSpec = Math.round(winWidth / 80);
-    console.log(`winWidth set to ${winWidth}, baseCols set to ${baseCols}, finalColSpec set to ${finalColSpec}`);
+function setMySize() {
+    const myWidth = document.documentElement.clientWidth * (outmostPct / 100); // account for margins
+    const myHeight = document.documentElement.clientHeight * ((outmostPct - 5)/ 100); // margins & base chooser
+    const myMinDim = myWidth < myHeight ? myWidth : myHeight;
+    baseColSpec = Math.round(myWidth / 46);
+    finalColSpec = Math.round(myMinDim / 62);
 
     /// Write style sheet from here so we can use its variables in our JavaScript:
-    const styleSheet = document.createElement('style');
-    styleSheet.innerHTML = `
+    let styleEl = document.getElementById("ccStyles"); // Avoid appending multiple <style>s
+    if (styleEl)
+        styleEl.parentNode.removeChild(styleEl);
+    const ccStyleSheet = document.createElement('style');
+    ccStyleSheet.id = "ccStyles";
+    ccStyleSheet.innerHTML = `
 
  :root {
      font-family: sans-serif;
@@ -28,16 +35,12 @@ function setWidth() {
      background-color: var(--bgcolor);
  }
 
-body {
-    margin: 10px;
-}
-
 h1 {
     text-align: center;
 }
 
 #outmost-div {
-    width: 95%;
+    width: ${outmostPct}%;
     margin-left: auto;
     margin-right: auto;
 }
@@ -45,7 +48,7 @@ h1 {
 #baseColors {
     display: grid;
     width: fit-content;
-    grid-template-columns: repeat(${baseCols}, ${gridCellSize}px);
+    grid-template-columns: repeat(${baseColSpec}, ${gridCellSize}px);
 }
 
 #finalColors {
@@ -56,10 +59,8 @@ h1 {
 
 #readout-grid {
     display: inline-grid;
-    width: fit-content;
-    grid-template-columns: repeat(3, ${gridCellSize * 4}px);
-    height: ${gridCellSize * 6};
-    max-width: 70px; /* scroll screen instead of wrapping beneath elements to my left */
+    grid-template-columns: ${gridCellSize * 1.2}px ${gridCellSize * 2}px;
+    max-width: ${gridCellSize * 2}px; /* scroll screen instead of wrapping beneath elements to my left */
 }
 
 base-el, final-el {
@@ -74,7 +75,7 @@ base-el, final-el {
     border-width: 2px;
     cursor: pointer;
     padding-left: ${gridCellSize / 20}px;
-    padding-top: ${gridCellSize} / 20}px;
+    padding-top: ${gridCellSize / 20}px;
 }
 
 @keyframes blink {
@@ -94,17 +95,11 @@ base-el, final-el {
     /*transform: skewY(-20deg);*/
 }
 
-.notSelected {
-}
-
 button {
     height: ${gridCellSize * 2}px;
     width: ${gridCellSize * 3}px;
     font-size: ${gridCellSize / 3}px;
     line-height: ${gridCellSize / 3}px;
-
-/*    width: 100px;
-    height: 70px;*/
     align-self: center;
     cursor: pointer;
     border: 3px solid gray;
@@ -115,7 +110,8 @@ button:focus {
     background: white;
 }
 `;
-    document.head.appendChild(styleSheet);
+
+    document.head.appendChild(ccStyleSheet);
 }
 
 Component.extend({
@@ -156,19 +152,26 @@ Component.extend({
 				</final-el>
 			{{/for}}
 		</div>
-		<span id="readout-grid">
+		<div id="readout-grid">
 		    <span style="text-align: right; padding: 6px"><b>Final<br>Color:</b></span>
 		    <span style="{{colorStyle(this.finalOrBaseOrSuggestedColor)}} padding: 12px; border: 3px solid gray;">
 			{{{printLongColor(this.finalOrBaseOrSuggestedColor)}}}
 			</span>
-		    <span style="padding: 12px">{{#if(this.clipCopied)}}<b>{{this.clipCopied}}</b> copied to clipboard.{{/if}}</span>
-		    <span />
+			<span></span>
+			<span></span>
+			<span></span>
             <button on:click=copyToClip({{printShortColor(this.finalOrBaseOrSuggestedColor)}})>
             Copy <b>{{printShortColor(this.finalOrBaseOrSuggestedColor)}}</b> to clipboard</button>
+            <span></span>
+            <span></span>
+            <span></span>
 		    <!-- Quotes coerce non-numeric to string for copyToClip(): -->
             <button on:click=copyToClip(\"{{printHexColor(this.finalOrBaseOrSuggestedColor)}}\")>
             Copy <b>{{printHexColor(this.finalOrBaseOrSuggestedColor)}}</b> to clipboard</button>
-		</span>
+            <span></span><span></span>
+		    <span style="padding: 12px; grid-column: 2 / 3">{{#if(this.clipCopied)}}<b>{{this.clipCopied}}</b> copied to clipboard.{{/if}}</span>
+		    <span />
+		</div>
 	</div>
 	`,
     ViewModel: {
@@ -178,17 +181,19 @@ Component.extend({
         suggestedFinalColor: "any",
         finalColor: "any",
         clipCopied: "any",
+        baseCols: { default: baseColSpec },
         finalCols: { default: finalColSpec },
 
         // DERIVED VALUES
         get baseColors() {
-            const sinFreq = .3;
+            // const sinFreq = .3;
+            const sinFreq = 6 / this.baseCols;
             const greenPhase = 2 * Math.PI / 3;
             const bluePhase = 4 * Math.PI / 3;
             const sineWidth = 127;
             const sineCtr = 128;
             const colors = [];
-            for (let j = 0; j < baseCols - 1; ++j) {
+            for (let j = 0; j < this.baseCols - 1; ++j) {
                 var red = Math.round(Math.sin(sinFreq * j + 0) * sineWidth + sineCtr);
                 var grn = Math.round(Math.sin(sinFreq * j + greenPhase) * sineWidth + sineCtr);
                 var blu = Math.round(Math.sin(sinFreq * j + bluePhase) * sineWidth + sineCtr);
@@ -200,7 +205,7 @@ Component.extend({
             return colors;
         },
         get baseOrSuggestedColor() {
-            return this.baseColor || this.suggestedBaseColor || this.baseColors[baseCols - 1];
+            return this.baseColor || this.suggestedBaseColor || this.baseColors[this.baseCols - 1];
         },
         get finalOrBaseOrSuggestedColor() {
             return this.finalColor || this.suggestedFinalColor || this.baseOrSuggestedColor;
@@ -295,8 +300,12 @@ Component.extend({
     },
     events: {
         '{window} resize': function () {
+            this.suggestedBaseColor = null;
+            this.baseColor = null;
+            this.suggestedFinalColor = null;
+            this.finalColor = null;
+            this.viewModel.baseCols = baseColSpec;
             this.viewModel.finalCols = finalColSpec;
-            console.log(`CanJS resize called, this.viewModel.finalCols set to ${this.viewModel.finalCols}.`);
         }
     }
 });

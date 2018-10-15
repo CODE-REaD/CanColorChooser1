@@ -1,18 +1,10 @@
-/*
-:root {
-    font-family: sans-serif;
-    font-size: 10px;
-    background-color: lightgray;
-}
-*/
 
-{.final-colors, .base-colors} li { float: left; padding: 5px; margin: 0px; width: 30px; border: solid 2px white;}
+/*{.final-colors, .base-colors} li { float: left; padding: 5px; margin: 0px; width: 30px; border: solid 2px white;}
 .base-colors {list-style: none;}
 
-/*.final-colors li { float: left; padding: 5px; margin: 0px; width: 30px;border: solid 2px white;}*/
-.final-colors {list-style: none; width: 330px;}
+.final-colors {list-style: none; width: 330px;}*/
 
-.clear {clear: both;}
+/*.clear {clear: both;} */
 
 .final {
     display: inline-block;
@@ -20,11 +12,6 @@
     height: 200px;
     margin-left: 50px;
 }
-
-li.selected  {
-    border: solid 2px black;
-}
-
 
 /*From Carson's CSS:*/
 
@@ -74,17 +61,17 @@ h1 {
     text-align: center;
 }
 
-base-grid {
+#baseColors {
     display: grid;
     grid-template-columns: repeat(19, var(--grid-cell-size));
 }
 
-final-grid {
+#finalColors {
     display: inline-grid;
     grid-template-columns: repeat(7, var(--grid-cell-size)); /* best w/odd number */
 }
 
-readout-grid {
+#readout-grid {
     display: inline-grid;
     grid-template-columns: repeat(3, calc(var(--grid-cell-size) * 4));
     height: calc(var(--grid-cell-size) * 6);
