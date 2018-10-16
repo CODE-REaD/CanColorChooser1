@@ -1,13 +1,13 @@
 // import {Component} from "//unpkg.com/can@5/core.mjs";
 import {Component} from "//unpkg.com/can@5/core.min.mjs";
 
-const release = "2.3";          // "Semantic" program version for end users
+const release = "2.4";          // "Semantic" program version for end users
 document.title = "CanJS Color Chooser " + release;
 
 ///// Set up responsive sizing of all elements by executing our CSS via JavaScript:
 
 const gridCellSize = 45;
-const outmostPct = 95;
+const bodyMargin = 40;
 let baseColSpec;
 let finalColSpec;
 
@@ -15,11 +15,13 @@ setMySize();
 window.addEventListener('resize', setMySize);
 
 function setMySize() {
-    const myWidth = document.documentElement.clientWidth * (outmostPct / 100); // account for margins
-    const myHeight = document.documentElement.clientHeight * ((outmostPct - 5)/ 100); // margins & base chooser
-    const myMinDim = myWidth < myHeight ? myWidth : myHeight;
-    baseColSpec = Math.round(myWidth / 46);
-    finalColSpec = Math.round(myMinDim / 62);
+    const myWidth = document.documentElement.clientWidth - bodyMargin * 2; // account for margins
+    const myHeight = document.documentElement.clientHeight - bodyMargin * 2; // margins + other elements
+    const finalWidth = myWidth - 135;
+    const finalHeight = myHeight - 175;
+    const finalMinDim = finalWidth < finalHeight ? finalWidth : finalHeight;
+    baseColSpec = Math.round(myWidth / gridCellSize);
+    finalColSpec = Math.round(finalMinDim / gridCellSize);
 
     /// Write style sheet from here so we can use its variables in our JavaScript:
     let styleEl = document.getElementById("ccStyles"); // Avoid appending multiple <style>s
@@ -28,21 +30,18 @@ function setMySize() {
     const ccStyleSheet = document.createElement('style');
     ccStyleSheet.id = "ccStyles";
     ccStyleSheet.innerHTML = `
+:root {
+    font-family: sans-serif;
+    --bgcolor: lightgray;
+    background-color: var(--bgcolor);
+}
 
- :root {
-     font-family: sans-serif;
-     --bgcolor: lightgray;
-     background-color: var(--bgcolor);
- }
+body {
+    margin: ${bodyMargin}px;
+}
 
 h1 {
     text-align: center;
-}
-
-#outmost-div {
-    width: ${outmostPct}%;
-    margin-left: auto;
-    margin-right: auto;
 }
 
 #baseColors {
@@ -117,7 +116,6 @@ button:focus {
 Component.extend({
     tag: "color-chooser",
     view: `
-    <div id="outmost-div">
         <h1>CanJS Color Chooser ${release}</h1>
 		<div>Click to lock base color 
 			<span style="{{colorStyle(this.baseOrSuggestedColor)}}">
@@ -172,7 +170,6 @@ Component.extend({
 		    <span style="padding: 12px; grid-column: 2 / 3">{{#if(this.clipCopied)}}<b>{{this.clipCopied}}</b> copied to clipboard.{{/if}}</span>
 		    <span />
 		</div>
-	</div>
 	`,
     ViewModel: {
         // STATEFUL PROPS
@@ -181,8 +178,8 @@ Component.extend({
         suggestedFinalColor: "any",
         finalColor: "any",
         clipCopied: "any",
-        baseCols: { default: baseColSpec },
-        finalCols: { default: finalColSpec },
+        baseCols: {default: baseColSpec},
+        finalCols: {default: finalColSpec},
 
         // DERIVED VALUES
         get baseColors() {
