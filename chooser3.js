@@ -1,7 +1,6 @@
-// import {Component} from "//unpkg.com/can@5/core.mjs";
+"use strict";
 import {Component} from "//unpkg.com/can@5/core.min.mjs";
-
-const release = "2.4";          // "Semantic" program version for end users
+const release = "2.5";          // "Semantic" program version for end users
 document.title = "CanJS Color Chooser " + release;
 
 ///// Set up responsive sizing of all elements by executing our CSS via JavaScript:
@@ -62,16 +61,18 @@ h1 {
     max-width: ${gridCellSize * 2}px; /* scroll screen instead of wrapping beneath elements to my left */
 }
 
-base-el, final-el {
+.base-el, .final-el {
+    border-color: var(--bgcolor);
+    border-style: solid;
+    border-width: 2px;
+}
+
+.base-el, .final-el, .selected {
     font-size: ${gridCellSize / 4}px;
     line-height: ${gridCellSize / 4}px;
     /*border-radius: ${gridCellSize / 8}px; causes lockups (performance) */
     height: ${gridCellSize / 1.1}px;
     display: block;
-    color: white;
-    border-color: var(--bgcolor);
-    border-style: solid;
-    border-width: 2px;
     cursor: pointer;
     padding-left: ${gridCellSize / 20}px;
     padding-top: ${gridCellSize / 20}px;
@@ -117,58 +118,57 @@ Component.extend({
     tag: "color-chooser",
     view: `
         <h1>CanJS Color Chooser ${release}</h1>
-		<div>Click to lock base color 
-			<span style="{{colorStyle(this.baseOrSuggestedColor)}}">
-				{{printShortColor(this.baseOrSuggestedColor)}}
+		<div><b>Click to lock base color</b> 
+			<span style="{{colorStyle(baseOrSuggestedColor)}}">
+				{{printShortColor(baseOrSuggestedColor)}}
 			</span>
 		</div>
 		
 		<div id="baseColors">
-			{{#for(color of this.baseColors)}}
-				<base-el style="{{colorStyle(color)}}" 
+			{{#for(color of baseColors)}}
+				<span style="{{colorStyle(color)}}" 
 					on:mouseenter="hoverBaseColor(color)"
 					on:click="clickBaseColor(color)"
-					{{#eq(color, suggestedBaseColor)}}class='selected'{{/eq}}>
+					{{#eq(color, suggestedBaseColor)}}class="selected"{{else}}class="base-el"{{/eq}}>
 					{{{printLongColor(color)}}}
-				</base-el>
+				</span>
 			{{/for}}
 			<br>
 		</div>
 		<div class='clear'>
-			Click to lock final color
-			<span style="{{colorStyle(this.finalOrBaseOrSuggestedColor)}}">
-				{{printShortColor(this.finalOrBaseOrSuggestedColor)}}
+			<b>Click to lock final color</b>
+			<span style="{{colorStyle(finalOrBaseOrSuggestedColor)}}">
+				{{printShortColor(finalOrBaseOrSuggestedColor)}}
 			</span>
 		</div>
 		<div id="finalColors">
-			{{#for(color of this.finalColors)}}
-				<final-el style="{{colorStyle(color)}}" 
+			{{#for(color of finalColors)}}
+				<span style="{{colorStyle(color)}}" 
 					on:mouseenter="hoverFinalColor(color)"
 					on:click="clickFinalColor(color)"
-					{{#eq(color,this.suggestedFinalColor)}}class='selected'{{/eq}}>
+					{{#eq(color, suggestedFinalColor)}}class="selected"{{else}}class="final-el"{{/eq}}>
 					{{{printLongColor(color)}}}
-				</final-el>
+				</span>
 			{{/for}}
 		</div>
 		<div id="readout-grid">
 		    <span style="text-align: right; padding: 6px"><b>Final<br>Color:</b></span>
-		    <span style="{{colorStyle(this.finalOrBaseOrSuggestedColor)}} padding: 12px; border: 3px solid gray;">
-			{{{printLongColor(this.finalOrBaseOrSuggestedColor)}}}
+		    <span style="{{colorStyle(finalOrBaseOrSuggestedColor)}} padding: 12px; border: 3px solid gray;">
+			{{{printLongColor(finalOrBaseOrSuggestedColor)}}}
 			</span>
 			<span></span>
 			<span></span>
 			<span></span>
-            <button on:click=copyToClip({{printShortColor(this.finalOrBaseOrSuggestedColor)}})>
-            Copy <b>{{printShortColor(this.finalOrBaseOrSuggestedColor)}}</b> to clipboard</button>
+            <button on:click=copyToClip({{printShortColor(finalOrBaseOrSuggestedColor)}})>
+            Copy <b>{{printShortColor(finalOrBaseOrSuggestedColor)}}</b> to clipboard</button>
             <span></span>
             <span></span>
             <span></span>
 		    <!-- Quotes coerce non-numeric to string for copyToClip(): -->
-            <button on:click=copyToClip(\"{{printHexColor(this.finalOrBaseOrSuggestedColor)}}\")>
-            Copy <b>{{printHexColor(this.finalOrBaseOrSuggestedColor)}}</b> to clipboard</button>
+            <button on:click=copyToClip(\"{{printHexColor(finalOrBaseOrSuggestedColor)}}\")>
+            Copy <b>{{printHexColor(finalOrBaseOrSuggestedColor)}}</b> to clipboard</button>
             <span></span><span></span>
-		    <span style="padding: 12px; grid-column: 2 / 3">{{#if(this.clipCopied)}}<b>{{this.clipCopied}}</b> copied to clipboard.{{/if}}</span>
-		    <span />
+		    <span style="padding: 12px; grid-column: 2 / 3">{{#if(clipCopied)}}<b>{{clipCopied}}</b> copied to clipboard.{{/if}}</span>
 		</div>
 	`,
     ViewModel: {
