@@ -217,7 +217,14 @@ Component.extend({
         finalCols: {default: finalColSpec},
         // finalArray: undefined, // not "watched" if declared as "undefined" (why?)
         finalArray: "any", // stateful so we can watch it during demo mode
-        demoButton: {default: "ON"},
+        demoButton: {default:
+            function () {
+                if (doDemo)
+                    return "OFF";
+                else
+                    return "ON";
+            }
+        },
 
         // DERIVED VALUES
         get baseColors() {
@@ -358,7 +365,7 @@ Component.extend({
                     this.suggestedBaseColor = nextBaseEl;  // Trigger update of final grid
                 }
                 demoRefreshing = false;
-                }, demoSpeed);
+            }, demoSpeed);
         },
         clockDemo() {
             setTimeout(() => {
