@@ -1,5 +1,6 @@
 "use strict";
 import {Component} from "//unpkg.com/can@5/core.min.mjs";
+
 const release = "2.5";          // "Semantic" program version for end users
 document.title = "CanJS Color Chooser " + release;
 
@@ -10,17 +11,37 @@ const bodyMargin = 40;
 let baseColSpec;
 let finalColSpec;
 
+// Demo mode:
+let demoSecs = 0;   // For frames/sec readout
+let frameCount = 0;
+
+let doDemo = false;
+let demoRefreshing = false;
+let demoBaseArray = [];  // Copy of baseArray For "demo" mode operation
+let demoSpeed = 10; // ms delay during demo cycles
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.has('demo')) {
+    if (urlParams.get('demo') === 'true')
+        doDemo = true;
+}
+
 setMySize();
 window.addEventListener('resize', setMySize);
 
 function setMySize() {
     const myWidth = document.documentElement.clientWidth - bodyMargin * 2; // account for margins
     const myHeight = document.documentElement.clientHeight - bodyMargin * 2; // margins + other elements
-    const finalWidth = myWidth - 135;
-    const finalHeight = myHeight - 175;
+
+    // "final" grid dimensions:
+    const finalWidth = myWidth - 145;   // Allow for readout grid
+    const finalHeight = myHeight - 185; // Allow for base grid
     const finalMinDim = finalWidth < finalHeight ? finalWidth : finalHeight;
+
     baseColSpec = Math.round(myWidth / gridCellSize);
     finalColSpec = Math.round(finalMinDim / gridCellSize);
+    if (finalColSpec < 2) finalColSpec = 2;
+    demoSecs = 0;
+    frameCount = 0;
 
     /// Write style sheet from here so we can use its variables in our JavaScript:
     let styleEl = document.getElementById("ccStyles"); // Avoid appending multiple <style>s
@@ -57,7 +78,7 @@ h1 {
 
 #readout-grid {
     display: inline-grid;
-    grid-template-columns: ${gridCellSize * 1.2}px ${gridCellSize * 2}px;
+    grid-template-columns: ${gridCellSize * 2}px ${gridCellSize * 2}px;
     max-width: ${gridCellSize * 2}px; /* scroll screen instead of wrapping beneath elements to my left */
 }
 
@@ -78,12 +99,18 @@ h1 {
     padding-top: ${gridCellSize / 20}px;
 }
 
+.info {
+    font-size: ${gridCellSize / 3.5}px;
+    text-align: right;
+    padding: 6px;
+}
+
 @keyframes blink {
     0% {
-        border: 2px solid white;
+        border: 2px inset white;
     }
     100% {
-        border: 2px solid black;
+        border: 2px outset white;
     }
 }
 
@@ -97,9 +124,9 @@ h1 {
 
 button {
     height: ${gridCellSize * 2}px;
-    width: ${gridCellSize * 3}px;
-    font-size: ${gridCellSize / 3}px;
-    line-height: ${gridCellSize / 3}px;
+    width: ${gridCellSize * 2}px;
+    font-size: ${gridCellSize / 3.5}px;
+    line-height: ${gridCellSize / 3.5}px;
     align-self: center;
     cursor: pointer;
     border: 3px solid gray;
@@ -108,6 +135,10 @@ button {
 button:hover,
 button:focus {
     background: white;
+}
+
+button:active {
+  transform: translate(4px, 4px);
 }
 `;
 
@@ -152,7 +183,7 @@ Component.extend({
 			{{/for}}
 		</div>
 		<div id="readout-grid">
-		    <span style="text-align: right; padding: 6px"><b>Final<br>Color:</b></span>
+		    <span class=info><b>Final<br>Color:</b></span>
 		    <span style="{{colorStyle(finalOrBaseOrSuggestedColor)}} padding: 12px; border: 3px solid gray;">
 			{{{printLongColor(finalOrBaseOrSuggestedColor)}}}
 			</span>
@@ -160,15 +191,18 @@ Component.extend({
 			<span></span>
 			<span></span>
             <button on:click=copyToClip({{printShortColor(finalOrBaseOrSuggestedColor)}})>
-            Copy <b>{{printShortColor(finalOrBaseOrSuggestedColor)}}</b> to clipboard</button>
-            <span></span>
-            <span></span>
-            <span></span>
+            Copy <br><b>{{printShortColor(finalOrBaseOrSuggestedColor)}}</b><br> to clipboard</button>
+  		    <span class=info>{{#if(clipCopied)}}<b>{{clipCopied}}</b> copied to clipboard.{{else}}<br><br><br>{{/if}}</span>
+
 		    <!-- Quotes coerce non-numeric to string for copyToClip(): -->
             <button on:click=copyToClip(\"{{printHexColor(finalOrBaseOrSuggestedColor)}}\")>
-            Copy <b>{{printHexColor(finalOrBaseOrSuggestedColor)}}</b> to clipboard</button>
-            <span></span><span></span>
-		    <span style="padding: 12px; grid-column: 2 / 3">{{#if(clipCopied)}}<b>{{clipCopied}}</b> copied to clipboard.{{/if}}</span>
+            Copy <br><b>{{printHexColor(finalOrBaseOrSuggestedColor)}}</b><br> to clipboard</button>
+            <span></span>
+            <span></span>
+            <span class=info>{{#if(framesPerSec)}}Average frames/sec:
+                <b>{{framesPerSec}}@{{finalCols}}x{{finalCols}}</b>{{/if}}</span>
+            <button on:click="toggleDemo()">
+                Demo {{demoButton}}</button>
 		</div>
 	`,
     ViewModel: {
@@ -177,9 +211,13 @@ Component.extend({
         baseColor: "any",
         suggestedFinalColor: "any",
         finalColor: "any",
-        clipCopied: "any",
+        clipCopied: {default: 0},
+        framesPerSec: {default: 0},
         baseCols: {default: baseColSpec},
         finalCols: {default: finalColSpec},
+        // finalArray: undefined, // not "watched" if declared as "undefined" (why?)
+        finalArray: "any", // stateful so we can watch it during demo mode
+        demoButton: {default: "ON"},
 
         // DERIVED VALUES
         get baseColors() {
@@ -199,6 +237,7 @@ Component.extend({
             // Add gray square:
             red = grn = blu = 127;
             colors.push({red, grn, blu});
+            demoBaseArray = colors;
             return colors;
         },
         get baseOrSuggestedColor() {
@@ -209,6 +248,7 @@ Component.extend({
         },
         get finalColors() {
             let colorArray = [];
+            // this.finalArray = [];
             let red;
             let grn;
             let blu;
@@ -228,14 +268,18 @@ Component.extend({
                     red = red > 255 ? 255 : red < 1 ? 0 : red;
                     grn = grn > 255 ? 255 : grn < 1 ? 0 : grn;
                     blu = blu > 255 ? 255 : blu < 1 ? 0 : blu;
+                    // this.finalArray.push({red, grn, blu}) // causes performance issues (fix CanJS?)
                     colorArray.push({red, grn, blu})
                 }
             }
+            // return this.finalArray;
+            this.finalArray = colorArray;
             return colorArray;
         },
         // HELPER METHODS
         colorStyle(color) {
-            if (color.red + color.grn + color.blu > 400)
+            if (color.red + color.grn * 1.5 + color.blu * .5 > 400)  // '+' coerces strings to numbers
+
                 return `color: black; background-color: rgb(${color.red},${color.grn},${color.blu});`
             else
                 return `color: white; background-color: rgb(${color.red},${color.grn},${color.blu});`
@@ -255,10 +299,12 @@ Component.extend({
 
         // METHODS THAT CHANGE STATE
         hoverBaseColor(color) {
+            if (doDemo) return;
             if (!this.baseColor)
                 this.suggestedBaseColor = color;
         },
         clickBaseColor(color) {
+            if (doDemo) return;
             if (this.baseColor) {
                 this.baseColor = null;
                 this.suggestedBaseColor = color;
@@ -271,10 +317,12 @@ Component.extend({
             }
         },
         hoverFinalColor(color) {
+            if (doDemo) return;
             if (!this.finalColor)
                 this.suggestedFinalColor = color;
         },
         clickFinalColor(color) {
+            if (doDemo) return;
             if (this.finalColor) {
                 this.finalColor = null;
                 this.suggestedFinalColor = color;
@@ -294,15 +342,77 @@ Component.extend({
             textArea.remove();
             this.clipCopied = `${clipStrings}`;
         },
+        // Methods related to "demo" mode.  Strategy is:
+        // - runDemo() changes suggestedBaseColor to a random selection
+        //      - change to suggestedBaseColor triggers random change to suggestedFinalColor
+        //          - change to suggestedFinalColor triggers runDemo() and the cycle repeats.
+        runDemo() {
+            let nextBaseEl;
+
+            do
+                nextBaseEl = demoBaseArray[Math.trunc(Math.random() * baseColSpec)];
+            while (nextBaseEl === this.suggestedBaseColor); // Force new random location
+
+            setTimeout(() => {
+                if (doDemo) {   // Test flag here since it may have been cleared during timeout
+                    this.suggestedBaseColor = nextBaseEl;  // Trigger update of final grid
+                }
+                demoRefreshing = false;
+                }, demoSpeed);
+        },
+        clockDemo() {
+            setTimeout(() => {
+                if (doDemo) {
+                    this.framesPerSec = (frameCount / ++demoSecs).toFixed(2); // Seconds we have been running this demo}
+                    this.clockDemo();
+                }
+            }, 1000);
+        },
+        toggleDemo() {
+            doDemo = !doDemo;
+            if (doDemo) {
+                demoRefreshing = false;
+                this.demoButton = "OFF";
+                this.clockDemo();
+                this.runDemo();     // Kick off demo
+            } else {
+                this.demoButton = "ON";
+                frameCount = 0;
+                demoSecs = 0;
+            }
+        }
     },
     events: {
-        '{window} resize': function () {
-            this.suggestedBaseColor = null;
-            this.baseColor = null;
-            this.suggestedFinalColor = null;
-            this.finalColor = null;
-            this.viewModel.baseCols = baseColSpec;
-            this.viewModel.finalCols = finalColSpec;
-        }
+        "{window} resize":
+            function () {
+                // console.log('resize event.');
+                this.viewModel.suggestedBaseColor = null;
+                this.viewModel.baseColor = null;
+                this.viewModel.suggestedFinalColor = null;
+                this.viewModel.finalColor = null;
+                this.viewModel.baseCols = baseColSpec;
+                this.viewModel.finalCols = finalColSpec;
+            },
+        "{viewModel} finalArray":
+        // finalArray update triggered by runDemo(); now select a color from it
+            function (viewModel, event, newValue) {
+                if (doDemo) {
+                    // console.log("finalArray triggered demo update.");
+                    let nextFinalEl;
+                    const finalCellCt = this.viewModel.finalCols * this.viewModel.finalCols;
+
+                    do
+                        nextFinalEl = this.viewModel.finalArray[Math.trunc(Math.random() * finalCellCt)];
+                    while (nextFinalEl === this.viewModel.finalColor); // Force new random location
+
+                    this.viewModel.suggestedFinalColor = nextFinalEl;
+                    frameCount++;
+                }
+            },
+        "{viewModel} suggestedFinalColor":
+        // suggestedFinalColor changed due to finalArray update (above); now restart runDemo()
+            function (viewModel, event, newValue) {
+                doDemo && this.viewModel.runDemo();
+            }
     }
 });
