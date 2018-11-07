@@ -1,7 +1,8 @@
 "use strict";
-import {Component} from "//unpkg.com/can@5/core.min.mjs";
+// import {Component} from "//unpkg.com/can@5/core.min.mjs";
+import {Component} from "//unpkg.com/can@5/core.mjs";
 
-const release = "2.5";          // "Semantic" program version for end users
+const release = "2.6";          // "Semantic" program version for end users
 document.title = "CanJS Color Chooser " + release;
 
 ///// Set up responsive sizing of all elements by executing our CSS via JavaScript:
@@ -183,7 +184,7 @@ Component.extend({
 			{{/for}}
 		</div>
 		<div id="readout-grid">
-		    <span class=info><b>Final<br>Color:</b></span>
+		    <span class="info"><b>Final<br>Color:</b></span>
 		    <span style="{{colorStyle(finalOrBaseOrSuggestedColor)}} padding: 12px; border: 3px solid gray;">
 			{{{printLongColor(finalOrBaseOrSuggestedColor)}}}
 			</span>
@@ -192,14 +193,14 @@ Component.extend({
 			<span></span>
             <button on:click=copyToClip({{printShortColor(finalOrBaseOrSuggestedColor)}})>
             Copy <br><b>{{printShortColor(finalOrBaseOrSuggestedColor)}}</b><br> to clipboard</button>
-  		    <span class=info>{{#if(clipCopied)}}<b>{{clipCopied}}</b> copied to clipboard.{{else}}<br><br><br>{{/if}}</span>
+  		    <span class="info">{{#if(clipCopied)}}<b>{{clipCopied}}</b> copied to clipboard.{{else}}<br><br><br>{{/if}}</span>
 
 		    <!-- Quotes coerce non-numeric to string for copyToClip(): -->
             <button on:click=copyToClip(\"{{printHexColor(finalOrBaseOrSuggestedColor)}}\")>
             Copy <br><b>{{printHexColor(finalOrBaseOrSuggestedColor)}}</b><br> to clipboard</button>
             <span></span>
             <span></span>
-            <span class=info>{{#if(framesPerSec)}}Average frames/sec:
+            <span class="info">{{#if(framesPerSec)}}Average frames/sec:
                 <b>{{framesPerSec}}@{{finalCols}}x{{finalCols}}</b>{{/if}}</span>
             <button on:click="toggleDemo()">
                 Demo {{demoButton}}</button>
@@ -217,12 +218,21 @@ Component.extend({
         finalCols: {default: finalColSpec},
         // finalArray: undefined, // not "watched" if declared as "undefined" (why?)
         finalArray: "any", // stateful so we can watch it during demo mode
-        demoButton: {default:
-            function () {
-                if (doDemo)
-                    return "OFF";
-                else
-                    return "ON";
+        demoButton: {
+            default:
+                function () {
+                    if (doDemo)
+                        return "OFF";
+                    else
+                        return "ON";
+                }
+        },
+        connectedCallback() {
+            if (doDemo) {
+                demoRefreshing = false;
+                this.demoButton = "OFF";
+                this.clockDemo();
+                this.runDemo();     // Kick off demo
             }
         },
 
